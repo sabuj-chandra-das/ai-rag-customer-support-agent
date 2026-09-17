@@ -1,0 +1,442 @@
+{
+  "name": "RAG based Email Customer support Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -640,
+        -16
+      ],
+      "id": "87e14f2b-69c6-4da3-a886-8bbe27cdc7e1",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "v5fvPMHEjbtm1PK8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.snippet }}",
+        "options": {
+          "systemMessage": "When answering questions, retrieve all relevant information from the knowledge base. Include complete lists, options, and details if they are available. Do not omit relevant items from the retrieved context."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -400,
+        -16
+      ],
+      "id": "37e480a9-5d39-4ecd-b3d8-856ca94a7b01",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -560,
+        208
+      ],
+      "id": "57736f41-9bcd-40f4-98cb-944ec4a50b12",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "Z3NnjpSZFnFE9Bq4",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Use this tool to search the e-commerce knowledge base. Retrieve relevant information from stored documents and answer questions only using the provided context. If the information is not available in the knowledge base, clearly state that you do not have that information.",
+        "tableName": {
+          "__rl": true,
+          "value": "ecommerce_documents",
+          "mode": "list",
+          "cachedResultName": "ecommerce_documents"
+        },
+        "topK": 10,
+        "options": {
+          "queryName": "match_ecommerce_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -224,
+        176
+      ],
+      "id": "4a7b800c-cabd-4de7-a9ac-56f41115b9a1",
+      "name": "Supabase Vector Store1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "wlN7YWxNMWkUYfRa",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "={{ $('Gmail Trigger').item.json.To }}",
+        "subject": "=Approval Required - Re: {{ $('Gmail Trigger').item.json.Subject }}",
+        "message": "=<h2>Customer Email</h2>\n\n<p>\n{{ $('Gmail Trigger').item.json.snippet }}\n</p>\n\n<hr>\n\n<h2>AI Generated Reply</h2>\n\n<p>\n{{ $('AI Agent').item.json.output }}\n</p>\n\n<hr>\n\n<p>\nPlease choose <b>Approve</b> or <b>Reject</b>.\n</p>",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "350d245a-6283-46f9-9d13-9340f2986355",
+      "name": "Send a message",
+      "webhookId": "56153fa2-8516-42a0-936d-50e7bad9cba3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "v5fvPMHEjbtm1PK8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Gmail Trigger').item.json.From }}",
+        "subject": "={{ $('Gmail Trigger').item.json.Subject }}",
+        "emailType": "text",
+        "message": "={{ $('AI Agent').item.json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "f03690ea-b871-42be-a6d8-03148a208ba7",
+      "name": "Send a message3",
+      "webhookId": "a2e11ce0-3b8a-4254-8347-be62041133e0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "v5fvPMHEjbtm1PK8",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1msDLHuJytD4BNebu_bX4IIxD-F0pHS_e",
+          "mode": "list",
+          "cachedResultName": "RAG Knowledge Base",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1msDLHuJytD4BNebu_bX4IIxD-F0pHS_e"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        512,
+        -16
+      ],
+      "id": "0db6081d-a4bf-4741-85c4-be46a3931b3e",
+      "name": "Google Drive Trigger",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "1aRjfWqqxsQR6aT2",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        768,
+        -16
+      ],
+      "id": "dfa6625a-5c84-474e-9e51-156e128637a9",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "1aRjfWqqxsQR6aT2",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "ecommerce_documents",
+          "mode": "list",
+          "cachedResultName": "ecommerce_documents"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        160
+      ],
+      "id": "ab767be7-883b-46d5-93e3-a05a8698a6d0",
+      "name": "Supabase Vector Store2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "wlN7YWxNMWkUYfRa",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        336
+      ],
+      "id": "17dad4c1-ddaf-448f-bcc1-66c1dca5737e",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        192,
+        272
+      ],
+      "id": "26ea7659-c089-4c4f-95c8-6a4529dece58",
+      "name": "Embeddings OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "Z3NnjpSZFnFE9Bq4",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.threadId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.4,
+      "position": [
+        -400,
+        192
+      ],
+      "id": "3c537f06-7b2d-48ff-8f87-e828461786e9",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "t2FCKTIyFYQjqytt",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message": {
+      "main": [
+        [
+          {
+            "node": "Send a message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a message3": {
+      "main": [
+        []
+      ]
+    },
+    "Google Drive Trigger": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Supabase Vector Store2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader1": {
+      "ai_document": [
+        [
+          {
+            "node": "Supabase Vector Store2",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store2",
+            "type": "ai_embedding",
+            "index": 0
+          },
+          {
+            "node": "Supabase Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "f0a42ba6-8bc1-4e31-bb58-0d302dc4bc6a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3c77990184b8455d361f10b7d85885b60cdedde8a0f813b6584113fafa9146bc"
+  },
+  "nodeGroups": [],
+  "id": "udzzEGFpKvQW2XNe",
+  "tags": []
+}
